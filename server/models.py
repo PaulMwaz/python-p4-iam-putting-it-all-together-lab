@@ -15,12 +15,16 @@ class User(db.Model, SerializerMixin):
 
     recipes = db.relationship('Recipe', back_populates='user', cascade='all, delete-orphan')
 
+    serialize_rules = ('-recipes.user',)
+
     @hybrid_property
     def password_hash(self):
         raise AttributeError('password_hash is not readable.')
 
     @password_hash.setter
     def password_hash(self, password):
+        if not password:
+            raise ValueError('Password is required.')
         self._password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
     def authenticate(self, password):
@@ -38,9 +42,11 @@ class Recipe(db.Model, SerializerMixin):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User', back_populates='recipes')
 
+    serialize_rules = ('-user.recipes',)
+
     @validates('instructions')
     def validate_instructions(self, key, instructions):
-        if len(instructions) < 50:
+        if not instructions or len(instructions) < 50:
             raise ValueError('Instructions must be at least 50 characters.')
         return instructions
 
